@@ -1,15 +1,21 @@
 #!/bin/bash
 
-################################
-## Guacamole Installer Script ##
+# CREATED BY
 ## Green Reed Technology 2015 ##
 ######## Martez Reed ###########
-################################
+
+# MODIFIED BY
+## Maik Ballichar
+
 
 ## Define variables
 
 guac_version=0.9.9
 mysql_version=5.1.38
+
+# !!!!!!!!!!!!!!!!
+# dont make changes below this line 
+# except you know what you do
 
 mysql_username=root
 mysql_password=P@ssw0rd
