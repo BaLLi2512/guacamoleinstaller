@@ -1,0 +1,167 @@
+#!/bin/bash
+
+################################
+## Guacamole Installer Script ##
+## Green Reed Technology 2015 ##
+######## Martez Reed ###########
+################################
+
+## Define variables
+
+guac_version=0.9.9
+mysql_version=5.1.38
+
+mysql_username=root
+mysql_password=P@ssw0rd
+
+#System Update
+apt-get update -y
+
+#System Upgrade
+apt-get upgrade -y
+
+#Install Tomcat 8
+apt-get install -y tomcat8
+
+# Install Packages
+apt-get install -y make libcairo2-dev libpango-1.0-0 libpango1.0-dev libssh2-1-dev libpng12-dev freerdp-x11 libssh2-1 libvncserver-dev libfreerdp-dev libvorbis-dev libssl1.0.0 gcc libssh-dev libpulse-dev tomcat7-admin tomcat7-docs libtelnet-dev libossp-uuid-dev libwebp-dev
+
+#Download Guacamole Client
+wget http://sourceforge.net/projects/guacamole/files/current/binary/guacamole-$guac_version.war
+
+#Download Guacamole Server
+wget http://sourceforge.net/projects/guacamole/files/current/source/guacamole-server-$guac_version.tar.gz
+
+# Untar the guacamole server source files
+tar -xzf guacamole-server-$guac_version.tar.gz
+
+# Change directory to the source files
+cd guacamole-server-$guac_version/
+
+#
+./configure --with-init-dir=/etc/init.d
+
+#
+make
+
+#
+make install
+
+#
+update-rc.d guacd defaults
+
+#
+ldconfig
+
+# Create guacamole configuration directory
+mkdir /etc/guacamole
+
+# Create guacamole.properties configuration file
+cat <<EOF1 > /etc/guacamole/guacamole.properties
+# Hostname and port of guacamole proxy
+guacd-hostname: localhost
+guacd-port:     4822
+
+
+# Auth provider class (authenticates user/pass combination, needed if using the provided login screen)
+#auth-provider: net.sourceforge.guacamole.net.basic.BasicFileAuthenticationProvider
+#basic-user-mapping: /etc/guacamole/user-mapping.xml
+
+# MySQL properties
+mysql-hostname: localhost
+mysql-port: 3306
+mysql-database: guacamole
+mysql-username: guacamole
+mysql-password: greenrt
+
+EOF1
+
+#
+mkdir /usr/share/tomcat8/.guacamole
+
+# Create a symbolic link of the properties file for Tomcat7
+ln -s /etc/guacamole/guacamole.properties /usr/share/tomcat8/.guacamole
+
+# Move up a directory to copy the guacamole.war file
+cd ..
+
+# Copy the guacamole war file to the Tomcat 7 webapps directory
+cp guacamole-$guac_version.war /var/lib/tomcat8/webapps/guacamole.war
+
+# Say tomcat where is guacamole at home
+echo "" >> /etc/default/tomcat8
+echo "# GUACAMOLE EVN VARIABLE" >> /etc/default/tomcat8
+echo "GUACAMOLE_HOME=/etc/guacamole" >> /etc/default/tomcat8
+
+# Start the Guacamole (guacd) service
+service guacd start
+
+# Restart Tomcat 8
+service tomcat8 restart
+
+########################################
+# MySQL Installation and configuration #
+########################################
+
+# Download Guacamole MySQL Authentication Module
+wget http://sourceforge.net/projects/guacamole/files/current/extensions/guacamole-auth-jdbc-$guac_version.tar.gz
+
+# Untar the Guacamole MySQL Authentication Module
+tar -xzf guacamole-auth-jdbc-$guac_version.tar.gz
+
+# Create Guacamole extensions directory for MySQL Authentication files
+mkdir -p /etc/guacamole/extensions
+
+# Copy Guacamole MySQL Authentication module files to the created directory
+cp guacamole-auth-jdbc-$guac_version/lib/* /etc/guacamole/extensions/
+
+# Download MySQL Connector-J
+wget http://dev.mysql.com/get/Downloads/Connector-J/mysql-connector-java-$mysql_version.tar.gz
+
+# Untar the MySQL Connector-J
+tar -xzf mysql-connector-java-$mysql_version.tar.gz
+
+# Create Guacamole lib directory for mysql connector file
+mkdir -p /etc/guacamole/lib
+
+# Copy the MySQL Connector-J jar file to the guacamole classpath diretory
+cp mysql-connector-java-$mysql_version/mysql-connector-java-$mysql_version-bin.jar /etc/guacamole/lib/
+
+# Provide mysql root password to automate installation
+debconf-set-selections <<< "mysql-server mysql-server/root_password password P@ssw0rd"
+debconf-set-selections <<< "mysql-server mysql-server/root_password_again password P@ssw0rd"
+
+# Install MySQL
+apt-get install -y mysql-server
+
+# Lay down mysql configuration script
+
+cat <<EOF2 > guacamolemysql.sql
+#MySQL Guacamole Script
+
+CREATE DATABASE guacamole;
+
+CREATE USER 'guacamole'@'localhost' IDENTIFIED BY 'dr0wss@P';
+
+GRANT SELECT,INSERT,UPDATE,DELETE ON guacamole.* TO 'guacamole'@'localhost';
+
+FLUSH PRIVILEGES;
+
+quit
+EOF2
+
+# Create Guacamole database and user
+mysql -u root --password=P@ssw0rd < guacamolemysql.sql
+
+# Change directory to mysql-auth directory
+cd guacamole-auth-jdbc-$guac_version
+
+# Run database scripts to create schema and users
+cat schema/*.sql | mysql -u root --password=P@ssw0rd guacamole
+
+# Restart tomcat8
+service tomcat8 restart
+
+# Restart guacd
+service guacd restart
+
