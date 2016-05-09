@@ -9,16 +9,16 @@
 
 
 ## Define variables
-
 guac_version=0.9.9
 mysql_version=5.1.38
+
+## for information
+mysql_username=root
+mysql_password=P@ssw0rd
 
 # !!!!!!!!!!!!!!!!
 # dont make changes below this line 
 # except you know what you do
-
-mysql_username=root
-mysql_password=P@ssw0rd
 
 #System Update
 apt-get update -y
@@ -68,17 +68,12 @@ cat <<EOF1 > /etc/guacamole/guacamole.properties
 guacd-hostname: localhost
 guacd-port:     4822
 
-
-# Auth provider class (authenticates user/pass combination, needed if using the provided login screen)
-#auth-provider: net.sourceforge.guacamole.net.basic.BasicFileAuthenticationProvider
-#basic-user-mapping: /etc/guacamole/user-mapping.xml
-
 # MySQL properties
 mysql-hostname: localhost
 mysql-port: 3306
 mysql-database: guacamole
 mysql-username: guacamole
-mysql-password: greenrt
+mysql-password: dr0wss@P
 
 EOF1
 
